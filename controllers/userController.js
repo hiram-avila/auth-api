@@ -27,7 +27,6 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Primero, intenta obtener el usuario desde Redis
     const cachedUser = await redisClient.get(email);
 
     let user;

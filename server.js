@@ -1,15 +1,21 @@
-// server.js
-const express = require('express');
-const bodyParser = require('body-parser');
-const authRoutes = require('./routes/authRoutes');
-const redisClient = require('redis').createClient();
+import express from 'express';
+import bodyParser from 'body-parser';
+import userRoutes from './routes/userRoutes.js';
+import sequelize from './config/config.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(bodyParser.json());
-app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
-app.listen(port, () => {
-    console.log(`Servidor escuchando en http://localhost:${port}`);
+sequelize.sync().then(() => {
+  console.log('Base de datos sincronizada');
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
