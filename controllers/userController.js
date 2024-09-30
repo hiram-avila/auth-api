@@ -27,14 +27,28 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ where: { email } });
+    // Primero, intenta obtener el usuario desde Redis
+    const cachedUser = await redisClient.get(email);
+
+    let user;
+    if (cachedUser) {
+      // Si el usuario está en caché, lo parseamos
+      user = JSON.parse(cachedUser);
+    } else {
+      // Si no, obtenemos el usuario de la base de datos
+      user = await User.findOne({ where: { email } });
+      if (user) {
+        // Almacena el usuario en Redis con un tiempo de expiración de 1 hora
+        await redisClient.set(email, JSON.stringify(user), 'EX', 3600);
+      }
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-     if (!isPasswordValid) {
+    if (!isPasswordValid) {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
@@ -50,6 +64,8 @@ export const deleteUser = async (req, res) => {
 
   try {
     await User.destroy({ where: { id } });
+    // También puedes eliminar el usuario del caché
+    await redisClient.del(id);
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar usuario' });
